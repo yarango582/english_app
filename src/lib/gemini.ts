@@ -50,7 +50,12 @@ export async function askTutor(
 }
 
 function normalize(s: string): string {
-  return s.trim().toLowerCase().replace(/[¡!¿?.,:;]/g, '').replace(/\s+/g, ' ').trim()
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/[¡!¿?.,:;()\[\]"'«»—–]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export async function checkAnswer(
@@ -68,21 +73,26 @@ export async function checkAnswer(
   }
 
   const altList = alternatives.map((a, i) => `  ${i + 1}. "${a}"`).join('\n')
-  const prompt = `Tema: ${topic}
-Pregunta: ${question}
+  const prompt = `Eres evaluador de un curso de inglés para colombianos (MacArthur English).
+
+Tema: ${topic}
+Pregunta: "${question}"
 Respuestas aceptadas (cualquiera es válida):
 ${altList}
 Respuesta del estudiante: "${userAnswer}"
 
-Reglas de evaluación:
-- La respuesta es CORRECTA si coincide con CUALQUIERA de las opciones aceptadas.
-- Ignora diferencias de puntuación (!, ¡, ?, ¿, puntos, comas).
-- Ignora diferencias de mayúsculas/minúsculas.
-- Sé flexible con variaciones ortográficas menores o acentos.
-- El score va de 0 a 5: 5=perfecto, 4=casi perfecto, 3=aceptable, 1-2=incorrecto parcial, 0=incorrecto.
+REGLAS DE EVALUACIÓN — aplica TODAS:
+1. Acepta si coincide semánticamente con CUALQUIERA de las opciones (no solo textual).
+2. Ignora puntuación: ¡!¿?.,:;()[]"'
+3. Ignora mayúsculas/minúsculas.
+4. Sé flexible con tildes/acentos (ej: "mas" ≈ "más", "deje" ≈ "déje").
+5. En imperativas en español: ACEPTA tanto la forma TÚ como la forma USTED. Ejemplo: "no lo golpees" es igual de válido que "no lo golpee".
+6. Acepta sinónimos razonables que transmitan el mismo significado.
+7. Penaliza solo si el significado cambia sustancialmente o hay error gramatical grave.
+8. Score: 5=perfecto/sinónimo exacto, 4=casi perfecto (acento o puntuación), 3=correcto pero forma diferente aceptable, 2=parcialmente correcto, 1=equivocado pero relacionado, 0=totalmente incorrecto.
 
 Responde SOLO con JSON válido (sin markdown):
-{"correct": true, "feedback": "retroalimentación corta en español", "score": 5}`
+{"correct": true|false, "feedback": "una frase corta en español", "score": 0|1|2|3|4|5}`
 
   const text = await groqChat(
     [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: prompt }],
