@@ -9,6 +9,8 @@ import StudyPage from '@/pages/StudyPage'
 import DashboardPage from '@/pages/DashboardPage'
 import TutorPage from '@/pages/TutorPage'
 import SessionSetupPage from '@/pages/SessionSetupPage'
+import SongsPage from '@/pages/SongsPage'
+import LyricsPage from '@/pages/LyricsPage'
 import Layout from '@/components/layout/Layout'
 
 function App() {
@@ -42,6 +44,8 @@ function App() {
           <Route path="/study" element={<StudyPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/tutor" element={<TutorPage />} />
+          <Route path="/songs" element={<SongsPage />} />
+          <Route path="/songs/lyrics" element={<LyricsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

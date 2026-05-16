@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Flashcard, CardProgress, Quality } from '@/types'
 import { Volume2 } from 'lucide-react'
 
@@ -41,10 +41,17 @@ export default function FlashcardView({ card, progress, onAnswer }: Props) {
   const hasMultiple = backParts.length > 1
 
   const speak = (text: string, lang: string) => {
+    speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = lang === 'EN' ? 'en-US' : 'es-ES'
     speechSynthesis.speak(utterance)
   }
+
+  // Auto-play front audio once when card changes
+  useEffect(() => {
+    speak(front, frontLang)
+    return () => speechSynthesis.cancel()
+  }, [card.id])
 
   const reset = () => setFlipped(false)
 

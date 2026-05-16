@@ -6,6 +6,8 @@ import type { Flashcard, CardProgress, StudyMode, Quality } from '@/types'
 import FlashcardView from '@/components/flashcard/FlashcardView'
 import WriteView from '@/components/flashcard/WriteView'
 import QuizView from '@/components/quiz/QuizView'
+import DictationView from '@/components/flashcard/DictationView'
+import SongView from '@/components/flashcard/SongView'
 import ResultsView from '@/components/session/ResultsView'
 
 interface SessionState {
@@ -13,6 +15,9 @@ interface SessionState {
   minutes: number
   selectedTopics: string[]
   pageLimit: number
+  categoryFilter?: string   // legacy: 'verbs' | 'irregular_verbs' (from HomePage quick access)
+  cardTypeFilter?: string   // new: actual card_type value ('word' | 'example' | 'exercise_item')
+  songId?: string
   plan: { review: { cards: number }; new: { cards: number }; quiz: { cards: number } }
 }
 
@@ -40,9 +45,27 @@ export default function StudyPage() {
     const today = new Date().toISOString().split('T')[0]
     const totalCards = session.plan.review.cards + session.plan.new.cards
 
-    let query = supabase.from('flashcards').select('*').limit(totalCards)
-    if (session.pageLimit < 157) query = query.lte('page_number', session.pageLimit)
-    if (session.selectedTopics.length > 0) query = query.in('topic', session.selectedTopics)
+    // Song mode: load specific song card if provided, else all phrase cards
+    if (session.mode === 'song') {
+      let q = supabase.from('flashcards').select('*').eq('card_type', 'phrase')
+      if (session.songId) q = q.eq('id', session.songId)
+      const { data } = await q.limit(20)
+      setCards(data ?? [])
+      setLoading(false)
+      return
+    }
+
+    let query = supabase.from('flashcards').select('*').limit(Math.max(totalCards, 20))
+
+    // Apply filters
+    if (session.categoryFilter === 'verbs' || session.categoryFilter === 'irregular_verbs') {
+      // Legacy quick-access: verb word cards
+      query = query.eq('card_type', 'word').ilike('category', '%verb%')
+    } else {
+      if (session.cardTypeFilter) query = query.eq('card_type', session.cardTypeFilter)
+      if (session.pageLimit < 157) query = query.lte('page_number', session.pageLimit)
+      if (session.selectedTopics.length > 0) query = query.in('topic', session.selectedTopics)
+    }
 
     const { data: flashcards } = await query
     const { data: progressData } = await supabase
@@ -54,10 +77,9 @@ export default function StudyPage() {
     const progressMap: Record<string, CardProgress> = {}
     for (const p of progressData ?? []) progressMap[p.flashcard_id] = p
 
-    // Mezclar: primero vencidas, luego nuevas
     const due = (flashcards ?? []).filter((c: Flashcard) => progressMap[c.id])
     const fresh = (flashcards ?? []).filter((c: Flashcard) => !progressMap[c.id])
-    setCards([...due, ...fresh].slice(0, totalCards))
+    setCards([...due, ...fresh].slice(0, Math.max(totalCards, 20)))
     setProgress(progressMap)
     setLoading(false)
   }
@@ -79,7 +101,7 @@ export default function StudyPage() {
     const update = {
       user_id: user.id,
       flashcard_id: card.id,
-      level: Math.min(3, (existing?.level ?? 1) + (correct ? 0 : 0)) as 1 | 2 | 3,
+      level: Math.min(3, (existing?.level ?? 1)) as 1 | 2 | 3,
       ease_factor: sm2Result.ease_factor,
       interval_days: sm2Result.interval_days,
       repetitions: sm2Result.repetitions,
@@ -137,6 +159,12 @@ export default function StudyPage() {
       )}
       {session.mode === 'quiz' && (
         <QuizView card={card} allCards={cards} onAnswer={handleAnswer} />
+      )}
+      {session.mode === 'dictation' && (
+        <DictationView card={card} onAnswer={handleAnswer} />
+      )}
+      {session.mode === 'song' && (
+        <SongView card={card} onAnswer={handleAnswer} />
       )}
     </div>
   )

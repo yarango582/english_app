@@ -49,20 +49,40 @@ export async function askTutor(
   ])
 }
 
+function normalize(s: string): string {
+  return s.trim().toLowerCase().replace(/[¡!¿?.,:;]/g, '').replace(/\s+/g, ' ').trim()
+}
+
 export async function checkAnswer(
   question: string,
   userAnswer: string,
   correctAnswer: string,
   topic: string
 ): Promise<{ correct: boolean; feedback: string; score: 0 | 1 | 2 | 3 | 4 | 5 }> {
+  const alternatives = correctAnswer.split('/').map(s => s.trim()).filter(Boolean)
+  const normUser = normalize(userAnswer)
+
+  // Fast path: exact match against any alternative (ignoring punctuation/case)
+  if (alternatives.some(alt => normalize(alt) === normUser)) {
+    return { correct: true, feedback: '¡Correcto!', score: 5 }
+  }
+
+  const altList = alternatives.map((a, i) => `  ${i + 1}. "${a}"`).join('\n')
   const prompt = `Tema: ${topic}
 Pregunta: ${question}
-Respuesta correcta: ${correctAnswer}
-Respuesta del estudiante: ${userAnswer}
+Respuestas aceptadas (cualquiera es válida):
+${altList}
+Respuesta del estudiante: "${userAnswer}"
 
-Evalúa la respuesta. Sé flexible con diferencias menores de ortografía o acentos.
-Responde SOLO con JSON válido:
-{"correct": true/false, "feedback": "retroalimentación corta en español", "score": 0}`
+Reglas de evaluación:
+- La respuesta es CORRECTA si coincide con CUALQUIERA de las opciones aceptadas.
+- Ignora diferencias de puntuación (!, ¡, ?, ¿, puntos, comas).
+- Ignora diferencias de mayúsculas/minúsculas.
+- Sé flexible con variaciones ortográficas menores o acentos.
+- El score va de 0 a 5: 5=perfecto, 4=casi perfecto, 3=aceptable, 1-2=incorrecto parcial, 0=incorrecto.
+
+Responde SOLO con JSON válido (sin markdown):
+{"correct": true, "feedback": "retroalimentación corta en español", "score": 5}`
 
   const text = await groqChat(
     [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: prompt }],
@@ -73,10 +93,10 @@ Responde SOLO con JSON válido:
     const clean = text.startsWith('```') ? text.split('\n').slice(1, -1).join('\n') : text
     return JSON.parse(clean)
   } catch {
-    const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()
+    const isCorrect = alternatives.some(alt => normalize(alt) === normUser)
     return {
       correct: isCorrect,
-      feedback: isCorrect ? '¡Correcto!' : `La respuesta correcta es: ${correctAnswer}`,
+      feedback: isCorrect ? '¡Correcto!' : `La respuesta correcta es: ${alternatives[0]}`,
       score: isCorrect ? 4 : 1,
     }
   }

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { Flashcard, Quality } from '@/types'
 import { checkAnswer } from '@/lib/gemini'
 import { Send, Volume2 } from 'lucide-react'
@@ -45,8 +45,15 @@ export default function WriteView({ card, onAnswer }: Props) {
   }
 
   const speak = (text: string, lang: 'en-US' | 'es-ES') => {
+    speechSynthesis.cancel()
     speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(text), { lang }))
   }
+
+  // Auto-play question audio once when card changes
+  useEffect(() => {
+    speak(question, card.front_es ? 'es-ES' : 'en-US')
+    return () => speechSynthesis.cancel()
+  }, [card.id])
 
   return (
     <div className="space-y-6">

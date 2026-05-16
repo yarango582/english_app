@@ -38,13 +38,30 @@ export default function HomePage() {
     load()
   }, [])
 
+  const goToSetup = (mode: string, categoryFilter?: string) => {
+    navigate('/study/setup', { state: { mode, categoryFilter } })
+  }
+
   const studyModes = [
-    { id: 'flashcard', icon: '🃏', label: 'Flashcards', desc: 'Repasa con tarjetas interactivas', color: 'bg-blue-50 border-blue-200' },
-    { id: 'write', icon: '✍️', label: 'Escritura', desc: 'Escribe la respuesta sin ver opciones', color: 'bg-purple-50 border-purple-200' },
-    { id: 'quiz', icon: '🎯', label: 'Quiz', desc: '4 opciones, cronometrado', color: 'bg-green-50 border-green-200' },
-    { id: 'dictation', icon: '🎧', label: 'Dictado', desc: 'Escucha y escribe lo que oyes', color: 'bg-orange-50 border-orange-200' },
-    { id: 'song', icon: '🎵', label: 'Canciones', desc: 'Aprende con las canciones del libro', color: 'bg-pink-50 border-pink-200' },
-    { id: 'exam', icon: '📋', label: 'Examen', desc: 'Simulacro de examen completo', color: 'bg-red-50 border-red-200' },
+    { id: 'flashcard', icon: '🃏', label: 'Flashcards', desc: 'Repasa con tarjetas interactivas', color: 'bg-blue-50 border-blue-200', route: '' },
+    { id: 'write', icon: '✍️', label: 'Escritura', desc: 'Escribe la respuesta sin ver opciones', color: 'bg-purple-50 border-purple-200', route: '' },
+    { id: 'quiz', icon: '🎯', label: 'Quiz', desc: '4 opciones, cronometrado', color: 'bg-green-50 border-green-200', route: '' },
+    { id: 'dictation', icon: '🎧', label: 'Dictado', desc: 'Escucha y escribe la traducción', color: 'bg-orange-50 border-orange-200', route: '' },
+    { id: 'song', icon: '🎵', label: 'Canciones', desc: 'Práctica con canciones del libro', color: 'bg-pink-50 border-pink-200', route: '/songs' },
+    { id: 'exam', icon: '📋', label: 'Examen', desc: 'Simulacro de examen completo', color: 'bg-red-50 border-red-200', route: '' },
+  ]
+
+  const quickModes = [
+    {
+      icon: '🔤', label: 'Verbos', desc: 'Practica todos los verbos del libro',
+      color: 'bg-indigo-50 border-indigo-300',
+      action: () => goToSetup('write', 'verbs'),
+    },
+    {
+      icon: '⚡', label: 'Verbos Irregulares', desc: 'Conjuga y traduce verbos irregulares',
+      color: 'bg-yellow-50 border-yellow-300',
+      action: () => goToSetup('write', 'irregular_verbs'),
+    },
   ]
 
   return (
@@ -67,10 +84,10 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* Quick study */}
+      {/* Quick study banner */}
       {stats.nextReviewCount > 0 && (
         <div
-          onClick={() => navigate('/study/setup', { state: { mode: 'flashcard', reviewOnly: true } })}
+          onClick={() => navigate('/study/setup', { state: { mode: 'flashcard' } })}
           className="bg-blue-600 text-white rounded-xl p-5 flex items-center justify-between cursor-pointer hover:bg-blue-700 transition-colors"
         >
           <div>
@@ -81,6 +98,24 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Quick verb modes */}
+      <div>
+        <h2 className="text-lg font-semibold text-slate-900 mb-3">⚡ Acceso rápido</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {quickModes.map(mode => (
+            <button
+              key={mode.label}
+              onClick={mode.action}
+              className={`${mode.color} border-2 rounded-xl p-4 text-left hover:shadow-md transition-shadow`}
+            >
+              <div className="text-2xl mb-2">{mode.icon}</div>
+              <div className="font-bold text-slate-900 text-sm">{mode.label}</div>
+              <div className="text-xs text-slate-500 mt-0.5">{mode.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Study modes */}
       <div>
         <h2 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
@@ -90,7 +125,7 @@ export default function HomePage() {
           {studyModes.map(mode => (
             <button
               key={mode.id}
-              onClick={() => navigate('/study/setup', { state: { mode: mode.id } })}
+              onClick={() => mode.route ? navigate(mode.route) : goToSetup(mode.id)}
               className={`${mode.color} border rounded-xl p-4 text-left hover:shadow-md transition-shadow`}
             >
               <div className="text-2xl mb-2">{mode.icon}</div>
