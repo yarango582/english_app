@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { sm2 } from '@/lib/sm2'
@@ -8,6 +8,7 @@ import WriteView from '@/components/flashcard/WriteView'
 import QuizView from '@/components/quiz/QuizView'
 import DictationView from '@/components/flashcard/DictationView'
 import SongView from '@/components/flashcard/SongView'
+import IrregularVerbView from '@/components/flashcard/IrregularVerbView'
 import ResultsView from '@/components/session/ResultsView'
 
 interface SessionState {
@@ -33,6 +34,10 @@ export default function StudyPage() {
   const [loading, setLoading] = useState(true)
   const [done, setDone] = useState(false)
 
+  // Combined mode: pre-assign a sub-mode per card index
+  const combinedModes = useRef<Array<'flashcard' | 'write' | 'dictation'>>([])
+  const COMBINED_POOL: Array<'flashcard' | 'write' | 'dictation'> = ['flashcard', 'write', 'dictation']
+
   useEffect(() => {
     if (!session) { navigate('/'); return }
     loadCards()
@@ -51,6 +56,19 @@ export default function StudyPage() {
       if (session.songId) q = q.eq('id', session.songId)
       const { data } = await q.limit(20)
       setCards(data ?? [])
+      setLoading(false)
+      return
+    }
+
+    // Irregular verb mode: load all irregular_verb cards
+    if (session.mode === 'irregular_verb') {
+      const { data } = await supabase
+        .from('flashcards')
+        .select('*')
+        .eq('card_type', 'irregular_verb')
+        .order('front_en')
+      const loaded = data ?? []
+      setCards(loaded)
       setLoading(false)
       return
     }
@@ -79,8 +97,17 @@ export default function StudyPage() {
 
     const due = (flashcards ?? []).filter((c: Flashcard) => progressMap[c.id])
     const fresh = (flashcards ?? []).filter((c: Flashcard) => !progressMap[c.id])
-    setCards([...due, ...fresh].slice(0, Math.max(totalCards, 20)))
+    const finalCards = [...due, ...fresh].slice(0, Math.max(totalCards, 20))
+    setCards(finalCards)
     setProgress(progressMap)
+
+    // Pre-assign combined sub-modes
+    if (session.mode === 'combined') {
+      combinedModes.current = finalCards.map(
+        (_, i) => COMBINED_POOL[i % COMBINED_POOL.length]
+      ).sort(() => Math.random() - 0.5) as Array<'flashcard' | 'write' | 'dictation'>
+    }
+
     setLoading(false)
   }
 
@@ -151,6 +178,9 @@ export default function StudyPage() {
         </div>
       </div>
 
+      {session.mode === 'irregular_verb' && (
+        <IrregularVerbView card={card} progress={cardProgress} onAnswer={handleAnswer} />
+      )}
       {session.mode === 'flashcard' && (
         <FlashcardView card={card} progress={cardProgress} onAnswer={handleAnswer} />
       )}
@@ -166,6 +196,22 @@ export default function StudyPage() {
       {session.mode === 'song' && (
         <SongView card={card} onAnswer={handleAnswer} />
       )}
+      {session.mode === 'combined' && (() => {
+        const subMode = combinedModes.current[currentIndex] ?? 'flashcard'
+        const modeLabels = { flashcard: '🃏 Tarjeta', write: '✍️ Escritura', dictation: '🎧 Dictado' }
+        return (
+          <div className="space-y-3">
+            <div className="flex justify-center">
+              <span className="text-xs font-semibold bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
+                {modeLabels[subMode]}
+              </span>
+            </div>
+            {subMode === 'flashcard' && <FlashcardView card={card} progress={cardProgress} onAnswer={handleAnswer} />}
+            {subMode === 'write'     && <WriteView card={card} onAnswer={handleAnswer} />}
+            {subMode === 'dictation' && <DictationView card={card} onAnswer={handleAnswer} />}
+          </div>
+        )
+      })()}
     </div>
   )
 }

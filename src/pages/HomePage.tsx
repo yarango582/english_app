@@ -21,15 +21,19 @@ export default function HomePage() {
       if (!user) return
 
       const today = new Date().toISOString().split('T')[0]
-      const [streakRes, reviewRes, masteredRes] = await Promise.all([
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+
+      const [streakRes, reviewRes, masteredRes, todayRes] = await Promise.all([
         supabase.from('user_preferences').select('streak_days').eq('user_id', user.id).single(),
         supabase.from('user_card_progress').select('id', { count: 'exact' }).eq('user_id', user.id).lte('next_review', today),
         supabase.from('user_card_progress').select('id', { count: 'exact' }).eq('user_id', user.id).gte('interval_days', 21),
+        supabase.from('user_card_progress').select('id', { count: 'exact' }).eq('user_id', user.id).gte('last_reviewed', todayStart.toISOString()),
       ])
 
       setStats({
         streak: streakRes.data?.streak_days ?? 0,
-        cardsToday: 0,
+        cardsToday: todayRes.count ?? 0,
         totalMastered: masteredRes.count ?? 0,
         nextReviewCount: reviewRes.count ?? 0,
       })
@@ -58,9 +62,17 @@ export default function HomePage() {
       action: () => goToSetup('write', 'verbs'),
     },
     {
-      icon: '⚡', label: 'Verbos Irregulares', desc: 'Conjuga y traduce verbos irregulares',
+      icon: '⚡', label: 'Verbos Irregulares', desc: 'Base · Pasado · Participio',
       color: 'bg-yellow-50 border-yellow-300',
-      action: () => goToSetup('write', 'irregular_verbs'),
+      action: () => navigate('/study', {
+        state: {
+          mode: 'irregular_verb',
+          minutes: 20,
+          selectedTopics: [],
+          pageLimit: 157,
+          plan: { review: { cards: 30, minutes: 15 }, new: { cards: 30, minutes: 5 }, quiz: { cards: 0, minutes: 0 } },
+        }
+      }),
     },
   ]
 

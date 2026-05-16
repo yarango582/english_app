@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import type { Flashcard, Quality } from '@/types'
-import { Home } from 'lucide-react'
+import { Home, Flame } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 interface Props {
   results: { cardId: string; quality: Quality; correct: boolean }[]
@@ -10,10 +12,53 @@ interface Props {
 export default function ResultsView({ results, cards, onFinish }: Props) {
   const correct = results.filter(r => r.correct).length
   const total = results.length
-  const pct = Math.round((correct / total) * 100)
+  const pct = Math.round((correct / Math.max(total, 1)) * 100)
 
   const emoji = pct >= 90 ? '🏆' : pct >= 70 ? '🎉' : pct >= 50 ? '👍' : '💪'
   const msg = pct >= 90 ? '¡Excelente!' : pct >= 70 ? '¡Muy bien!' : pct >= 50 ? '¡Bien hecho!' : '¡Sigue practicando!'
+
+  const [newStreak, setNewStreak] = useState<number | null>(null)
+  const [streakIncreased, setStreakIncreased] = useState(false)
+
+  useEffect(() => {
+    const updateStreak = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const today = new Date().toISOString().split('T')[0]
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+
+      const { data: prefs } = await supabase
+        .from('user_preferences')
+        .select('streak_days, last_study_date')
+        .eq('user_id', user.id)
+        .single()
+
+      let streak = 1
+      if (prefs) {
+        if (prefs.last_study_date === today) {
+          streak = prefs.streak_days ?? 1        // already studied today, keep
+          setStreakIncreased(false)
+        } else if (prefs.last_study_date === yesterday) {
+          streak = (prefs.streak_days ?? 0) + 1  // extend streak
+          setStreakIncreased(true)
+        } else {
+          streak = 1                              // reset
+          setStreakIncreased(false)
+        }
+      } else {
+        setStreakIncreased(true)
+      }
+
+      await supabase.from('user_preferences').upsert(
+        { user_id: user.id, streak_days: streak, last_study_date: today, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+      setNewStreak(streak)
+    }
+
+    updateStreak()
+  }, [])
 
   const wrong = results
     .filter(r => !r.correct)
@@ -47,6 +92,21 @@ export default function ResultsView({ results, cards, onFinish }: Props) {
           <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
         </div>
       </div>
+
+      {/* Streak badge */}
+      {newStreak !== null && (
+        <div className={`rounded-2xl p-4 flex items-center gap-3 ${streakIncreased ? 'bg-orange-50 border-2 border-orange-300' : 'bg-slate-50 border border-slate-200'}`}>
+          <Flame size={28} className={streakIncreased ? 'text-orange-500' : 'text-slate-400'} />
+          <div>
+            <p className="font-bold text-slate-900">
+              {streakIncreased ? `¡Racha aumentada! 🔥 ${newStreak} días` : `Racha: ${newStreak} días`}
+            </p>
+            <p className="text-xs text-slate-500">
+              {streakIncreased ? '¡Sigue así! Vuelve mañana para mantenerla.' : 'Ya estudiaste hoy. ¡Bien hecho!'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Incorrect cards */}
       {wrong.length > 0 && (

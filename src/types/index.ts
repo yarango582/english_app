@@ -1,6 +1,6 @@
 export interface Flashcard {
   id: string
-  card_type: 'word' | 'phrase' | 'rule' | 'example' | 'exercise_item'
+  card_type: 'word' | 'phrase' | 'rule' | 'example' | 'exercise_item' | 'irregular_verb'
   front_en: string | null
   front_es: string | null
   back_en: string | null
@@ -49,5 +49,5 @@ export interface UserPreferences {
   streak_days: number
 }
 
-export type StudyMode = 'flashcard' | 'write' | 'quiz' | 'dictation' | 'song' | 'exam'
+export type StudyMode = 'flashcard' | 'write' | 'quiz' | 'dictation' | 'song' | 'exam' | 'combined' | 'irregular_verb'
 export type Quality = 0 | 1 | 2 | 3 | 4 | 5

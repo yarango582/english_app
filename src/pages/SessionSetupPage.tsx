@@ -7,11 +7,12 @@ import type { StudyMode } from '@/types'
 
 const TIME_OPTIONS = [5, 10, 20, 30, 45, 60]
 
-const MODES: { id: StudyMode; label: string; icon: string }[] = [
+const MODES: { id: StudyMode; label: string; icon: string; desc?: string }[] = [
   { id: 'flashcard', label: 'Flashcards', icon: '🃏' },
   { id: 'write',    label: 'Escritura',   icon: '✍️' },
   { id: 'quiz',     label: 'Quiz',        icon: '🎯' },
   { id: 'dictation',label: 'Dictado',     icon: '🎧' },
+  { id: 'combined', label: 'Combinado',   icon: '⚡', desc: 'Mezcla de tarjetas, dictado y escritura' },
 ]
 
 // ── Categorías principales ──────────────────────────────────────────────────
@@ -171,7 +172,10 @@ export default function SessionSetupPage() {
             <button key={m.id} onClick={() => setMode(m.id)}
               className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${mode === m.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}>
               <span className="text-xl">{m.icon}</span>
-              <span className="font-medium text-sm text-slate-800">{m.label}</span>
+              <div>
+                <span className="font-medium text-sm text-slate-800">{m.label}</span>
+                {m.desc && <p className="text-xs text-slate-400 mt-0.5">{m.desc}</p>}
+              </div>
             </button>
           ))}
         </div>
