@@ -5,7 +5,7 @@ import { Send, Bot, User } from 'lucide-react'
 
 export default function TutorPage() {
   const [messages, setMessages] = useState<TutorMessage[]>([
-    { role: 'model', content: '¡Hola! Soy tu tutor de inglés del curso MacArthur. Puedes preguntarme sobre cualquier tema del libro: gramática, vocabulario, ejercicios, reglas... ¿En qué te puedo ayudar?' }
+    { role: 'assistant', content: '¡Hola! Soy tu tutor de inglés del curso MacArthur. Puedes preguntarme sobre cualquier tema del libro: gramática, vocabulario, ejercicios, reglas... ¿En qué te puedo ayudar?' }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,9 +23,9 @@ export default function TutorPage() {
     setLoading(true)
     try {
       const reply = await askTutor([...messages, userMsg])
-      setMessages(prev => [...prev, { role: 'model', content: reply }])
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }])
     } catch {
-      setMessages(prev => [...prev, { role: 'model', content: 'Lo siento, hubo un error. Intenta de nuevo.' }])
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Lo siento, hubo un error. Intenta de nuevo.' }])
     }
     setLoading(false)
   }
@@ -46,11 +46,11 @@ export default function TutorPage() {
       <div className="flex-1 overflow-y-auto space-y-4 pr-1">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.role === 'model' ? 'bg-blue-100' : 'bg-slate-200'}`}>
-              {msg.role === 'model' ? <Bot size={16} className="text-blue-600" /> : <User size={16} className="text-slate-600" />}
+            <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.role === 'assistant' ? 'bg-blue-100' : 'bg-slate-200'}`}>
+              {msg.role === 'assistant' ? <Bot size={16} className="text-blue-600" /> : <User size={16} className="text-slate-600" />}
             </div>
             <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-              msg.role === 'model' ? 'bg-white border border-slate-200 text-slate-800' : 'bg-blue-600 text-white'
+              msg.role === 'assistant' ? 'bg-white border border-slate-200 text-slate-800' : 'bg-blue-600 text-white'
             }`}>
               <p className="whitespace-pre-wrap">{msg.content}</p>
             </div>
